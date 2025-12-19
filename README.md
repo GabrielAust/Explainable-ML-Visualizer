@@ -75,7 +75,7 @@ Learning journeys (to guide backlog prioritization):
 
 ---
 
-## Project Structure (Planned)
+## Project Structure
 
 ```
 explainable-ml-visualizer/
@@ -110,6 +110,16 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+This runs a placeholder visualization loop that prints step updates in the console.
+
+---
+
+## Adding New Algorithms
+
+* Add model implementations in `models/` (e.g., training logic, parameter updates).
+* Add visualization logic in `visualizations/` to render model state per step.
+* Wire the model + visualization together in `main.py` or a future orchestrator module.
 
 ---
 
