@@ -16,6 +16,14 @@ class LinearRegressionState:
     bias: float
 
 
+@dataclass
+class LinearRegressionGradients:
+    """Tracks gradients for each parameter."""
+
+    weight: float
+    bias: float
+
+
 class LinearRegressionGD:
     """Simple linear regression using batch gradient descent."""
 
@@ -36,7 +44,10 @@ class LinearRegressionGD:
         self,
         features: Sequence[float],
         targets: Sequence[float],
-        on_step: Callable[[int, float, LinearRegressionState], None] | None = None,
+        on_step: Callable[
+            [int, float, LinearRegressionState, LinearRegressionGradients], None
+        ]
+        | None = None,
     ) -> LinearRegressionState:
         """Fit the model to features/targets using gradient descent.
 
@@ -62,7 +73,12 @@ class LinearRegressionGD:
             self.state.bias -= self.learning_rate * gradient_b
 
             if on_step:
-                on_step(step, loss, self.state)
+                on_step(
+                    step,
+                    loss,
+                    self.state,
+                    LinearRegressionGradients(weight=gradient_w, bias=gradient_b),
+                )
 
         return self.state
 
