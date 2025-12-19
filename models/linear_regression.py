@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Callable, Sequence
 
 from data.dataset_generators import generate_linear_data as _generate_linear_data
+from utils.state import ModelState
 
 
 @dataclass
@@ -45,10 +46,10 @@ class LinearRegressionGD:
         features: Sequence[float],
         targets: Sequence[float],
         on_step: Callable[
-            [int, float, LinearRegressionState, LinearRegressionGradients], None
+            [int, ModelState, LinearRegressionGradients], None
         ]
         | None = None,
-    ) -> LinearRegressionState:
+    ) -> ModelState:
         """Fit the model to features/targets using gradient descent.
 
         Args:
@@ -61,6 +62,7 @@ class LinearRegressionGD:
         if not features:
             raise ValueError("features must not be empty.")
 
+        loss_history: list[float] = []
         for step in range(1, self.iterations + 1):
             predictions = self.predict(features)
             errors = [pred - target for pred, target in zip(predictions, targets)]
@@ -71,16 +73,26 @@ class LinearRegressionGD:
 
             self.state.weight -= self.learning_rate * gradient_w
             self.state.bias -= self.learning_rate * gradient_b
+            loss_history.append(loss)
+            updated_predictions = self.predict(features)
+
+            model_state = ModelState(
+                parameters={
+                    "weight": self.state.weight,
+                    "bias": self.state.bias,
+                },
+                predictions=updated_predictions,
+                loss_history=loss_history.copy(),
+            )
 
             if on_step:
                 on_step(
                     step,
-                    loss,
-                    self.state,
+                    model_state,
                     LinearRegressionGradients(weight=gradient_w, bias=gradient_b),
                 )
 
-        return self.state
+        return model_state
 
 
 def generate_linear_data(

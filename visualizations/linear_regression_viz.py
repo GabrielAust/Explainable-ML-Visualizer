@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from models.linear_regression import LinearRegressionGradients, LinearRegressionState
+from models.linear_regression import LinearRegressionGradients
+from utils.state import ModelState
 from visualizations.common import ConsoleVisualizer, VisualizationConfig
 
 
@@ -25,17 +26,19 @@ class LinearRegressionConsoleVisualizer:
     def update(
         self,
         step: int,
-        loss: float,
-        state: LinearRegressionState,
+        state: ModelState,
         gradients: LinearRegressionGradients,
     ) -> None:
         """Display the current training step."""
+        loss = state.loss_history[-1] if state.loss_history else 0.0
+        weight = state.parameters.get("weight", 0.0)
+        bias = state.parameters.get("bias", 0.0)
         self.console.render_step(
             step,
             [("Loss", f"{loss:.6f}")],
             [
-                f"Weight = {state.weight:.4f}",
-                f"Bias = {state.bias:.4f}",
+                f"Weight = {weight:.4f}",
+                f"Bias = {bias:.4f}",
                 f"dW = {gradients.weight:.4f}",
                 f"dB = {gradients.bias:.4f}",
             ],
@@ -45,12 +48,14 @@ class LinearRegressionConsoleVisualizer:
             ),
         )
 
-    def summarize(self, state: LinearRegressionState) -> None:
+    def summarize(self, state: ModelState) -> None:
         """Display the final parameters."""
+        weight = state.parameters.get("weight", 0.0)
+        bias = state.parameters.get("bias", 0.0)
         self.console.summarize(
             [
                 "Training complete.",
-                f"Final weight: {state.weight:.4f}",
-                f"Final bias:   {state.bias:.4f}",
+                f"Final weight: {weight:.4f}",
+                f"Final bias:   {bias:.4f}",
             ]
         )
