@@ -16,6 +16,7 @@ class VisualizationConfig:
 
     step_delay_s: float = 0.1
     display_every: int = 1
+    min_render_interval_s: float = 0.05
     step_through: bool = False
     show_explanations: bool = False
     show_state_overlay: bool = True
@@ -82,6 +83,13 @@ class ConsoleVisualizer:
     def __init__(self, config: VisualizationConfig | None = None) -> None:
         self.config = config or VisualizationConfig()
         self.exporter: VisualizationExporter | None = None
+        self._last_render_time: float | None = None
+        self._pending_update: tuple[
+            int,
+            Iterable[tuple[str, str]],
+            Iterable[str],
+            str | None,
+        ] | None = None
         if self.config.export_dir:
             self.exporter = VisualizationExporter(
                 self.config.export_dir,
@@ -120,6 +128,32 @@ class ConsoleVisualizer:
         """Render a single step update."""
         if step % self.config.display_every != 0:
             return
+        if self.config.step_through:
+            self._render_step(step, metrics, state_lines, explanation)
+            self._last_render_time = time.monotonic()
+            return
+
+        min_interval = max(0.0, self.config.min_render_interval_s)
+        now = time.monotonic()
+        if self._last_render_time is not None and now - self._last_render_time < min_interval:
+            self._pending_update = (step, metrics, state_lines, explanation)
+            return
+
+        self._pending_update = None
+        self._render_step(step, metrics, state_lines, explanation)
+        self._last_render_time = now
+
+    def _render_step(
+        self,
+        step: int,
+        metrics: Iterable[tuple[str, str]],
+        state_lines: Iterable[str],
+        explanation: str | None = None,
+        *,
+        apply_delay: bool = True,
+        allow_step_through: bool = True,
+    ) -> None:
+        """Render a step payload to the console and optional exporter."""
 
         metric_parts = [f"Step {step:>4}"] + [f"{name}: {value}" for name, value in metrics]
         print(" | ".join(metric_parts))
@@ -140,14 +174,25 @@ class ConsoleVisualizer:
         if self.exporter:
             self.exporter.render_frame(export_lines, f"frame_{step:04d}")
 
-        if self.config.step_through:
+        if self.config.step_through and allow_step_through:
             input("  Press Enter to advance to the next step...")
             return
-
-        time.sleep(self.config.step_delay_s)
+        if apply_delay and self.config.step_delay_s > 0:
+            time.sleep(self.config.step_delay_s)
 
     def summarize(self, summary_lines: Iterable[str]) -> None:
         """Display the final summary."""
+        if self._pending_update is not None:
+            step, metrics, state_lines, explanation = self._pending_update
+            self._render_step(
+                step,
+                metrics,
+                state_lines,
+                explanation,
+                apply_delay=False,
+                allow_step_through=False,
+            )
+            self._pending_update = None
         print("\nSummary")
         print("-------")
         lines = list(summary_lines)
