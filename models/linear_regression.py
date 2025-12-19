@@ -60,7 +60,7 @@ class LinearRegressionGD:
         """
         if len(features) != len(targets):
             raise ValueError("features and targets must be the same length.")
-        if not features:
+        if len(features) == 0:
             raise ValueError("features must not be empty.")
 
         self.loss_history = []
@@ -109,7 +109,7 @@ class LinearRegressionGD:
     def _validate_data(features: Sequence[float], targets: Sequence[float]) -> None:
         if len(features) != len(targets):
             raise ValueError("features and targets must be the same length.")
-        if not features:
+        if len(features) == 0:
             raise ValueError("features must not be empty.")
 
     @staticmethod
