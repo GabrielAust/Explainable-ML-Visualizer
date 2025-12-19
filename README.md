@@ -75,6 +75,26 @@ Learning journeys (to guide backlog prioritization):
 
 ---
 
+## Visualization Stack
+
+**Chosen backend:** Matplotlib (desktop/native rendering) with optional `ipywidgets` for notebook sliders.
+
+### Required dependencies
+
+* `matplotlib` (core plotting + animation)
+* `numpy` (data generation and array operations used in live updates)
+* `pillow` (image/GIF export support)
+
+> Optional: `ipywidgets` for Jupyter-based interactivity (sliders, dropdowns). This is not required for running the core scripts.
+
+### Rationale & constraints
+
+* **Real-time updates:** Matplotlib supports tight training loops via `plt.pause` or `FuncAnimation` without a web server.
+* **Interactivity:** Basic controls can be implemented with Matplotlib widgets or (optionally) `ipywidgets` in notebooks.
+* **Export support:** Matplotlib + Pillow can export static images and animations (e.g., PNG/GIF) for teaching materials.
+
+---
+
 ## Visualization Library Decision
 
 **Decision: Matplotlib for the primary visualization layer.**
