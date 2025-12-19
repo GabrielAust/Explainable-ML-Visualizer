@@ -7,6 +7,7 @@ from typing import Any, Mapping
 import matplotlib.pyplot as plt
 import numpy as np
 
+from utils.state import ModelState
 from visualizations.base import VisualizationBase
 
 
@@ -53,25 +54,26 @@ class LinearRegressionPlotVisualizer(VisualizationBase):
 
     def update(
         self,
-        state: Mapping[str, Any],
+        state: Mapping[str, Any] | ModelState,
         metadata: Mapping[str, Any] | None = None,
     ) -> None:
         """Render a new frame using the provided model state."""
         if self.fig is None or self.data_ax is None or self.loss_ax is None:
             self.setup(metadata)
 
-        x, y = self._extract_xy(state, metadata)
+        normalized_state = self._normalize_state(state)
+        x, y = self._extract_xy(normalized_state, metadata)
         self._x, self._y = x, y
 
         if self._scatter is not None:
             self._scatter.set_offsets(np.column_stack([x, y]))
 
         line_x = np.linspace(float(np.min(x)), float(np.max(x)), 200)
-        line_y = self._compute_regression_line(state, line_x)
+        line_y = self._compute_regression_line(normalized_state, line_x)
         if self._line is not None:
             self._line.set_data(line_x, line_y)
 
-        self._update_loss_history(state)
+        self._update_loss_history(normalized_state)
         if self._loss_line is not None:
             iterations = np.arange(len(self._loss_history))
             self._loss_line.set_data(iterations, self._loss_history)
@@ -141,6 +143,12 @@ class LinearRegressionPlotVisualizer(VisualizationBase):
 
         if not self._loss_history:
             self._loss_history = [1.0, 0.8, 0.6, 0.55]
+
+    @staticmethod
+    def _normalize_state(state: Mapping[str, Any] | ModelState) -> Mapping[str, Any]:
+        if isinstance(state, ModelState):
+            return state.as_mapping()
+        return state
 
     @staticmethod
     def _coerce_vector(value: Any) -> np.ndarray | None:
