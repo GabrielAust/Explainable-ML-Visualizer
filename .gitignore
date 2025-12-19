@@ -24,6 +24,9 @@ ENV/
 # ML / Data
 # =========================
 data/
+!data/
+!data/*.py
+!data/**/
 datasets/
 *.csv
 *.tsv
@@ -36,6 +39,8 @@ datasets/
 
 # Model artifacts
 models/
+!models/
+!models/*.py
 checkpoints/
 *.pt
 *.pth

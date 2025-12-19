@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Sequence
 
+from data.dataset_generators import generate_linear_data as _generate_linear_data
+
 
 @dataclass
 class LinearRegressionState:
@@ -72,19 +74,9 @@ def generate_linear_data(
     noise: float = 0.0,
 ) -> tuple[list[float], list[float]]:
     """Generate synthetic linear data for demonstration."""
-    if samples <= 0:
-        raise ValueError("samples must be positive.")
-    if noise < 0:
-        raise ValueError("noise must be non-negative.")
-
-    features: list[float] = []
-    targets: list[float] = []
-    for i in range(samples):
-        x_val = i / (samples - 1) if samples > 1 else 0.0
-        y_val = slope * x_val + intercept
-        if noise:
-            y_val += noise * ((i % 3) - 1)
-        features.append(x_val)
-        targets.append(y_val)
-
-    return features, targets
+    return _generate_linear_data(
+        slope=slope,
+        intercept=intercept,
+        samples=samples,
+        noise=noise,
+    )
