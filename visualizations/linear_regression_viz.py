@@ -2,36 +2,25 @@
 
 from __future__ import annotations
 
-import time
-from dataclasses import dataclass
-
 from models.linear_regression import LinearRegressionGradients, LinearRegressionState
-
-
-@dataclass
-class VisualizationConfig:
-    """Configuration for the training visualization."""
-
-    step_delay_s: float = 0.1
-    display_every: int = 1
-    show_weights: bool = True
-    show_gradients: bool = True
-    step_through: bool = False
-    show_explanations: bool = False
+from visualizations.common import ConsoleVisualizer, VisualizationConfig
 
 
 class LinearRegressionConsoleVisualizer:
     """Visualize linear regression training metrics in the console."""
 
     def __init__(self, config: VisualizationConfig | None = None) -> None:
-        self.config = config or VisualizationConfig()
+        self.console = ConsoleVisualizer(config)
 
     def announce(self, learning_rate: float, iterations: int) -> None:
         """Display the setup before training starts."""
-        print("\nLinear Regression Training")
-        print("-" * 32)
-        print(f"Learning rate: {learning_rate}")
-        print(f"Iterations:    {iterations}\n")
+        self.console.announce(
+            "Linear Regression Training",
+            [
+                ("Learning rate", f"{learning_rate:.4f}"),
+                ("Iterations", str(iterations)),
+            ],
+        )
 
     def update(
         self,
@@ -41,32 +30,27 @@ class LinearRegressionConsoleVisualizer:
         gradients: LinearRegressionGradients,
     ) -> None:
         """Display the current training step."""
-        if step % self.config.display_every != 0:
-            return
-
-        pieces = [f"Step {step:>4}", f"Loss: {loss:.6f}"]
-        if self.config.show_weights:
-            pieces.append(f"Weight: {state.weight:.4f}")
-            pieces.append(f"Bias: {state.bias:.4f}")
-        if self.config.show_gradients:
-            pieces.append(f"dW: {gradients.weight:.4f}")
-            pieces.append(f"dB: {gradients.bias:.4f}")
-        print(" | ".join(pieces))
-
-        if self.config.show_explanations:
-            print(
-                "  Explanation: computed gradients, then updated weight and bias "
-                "by subtracting learning_rate * gradient."
-            )
-
-        if self.config.step_through:
-            input("  Press Enter to advance to the next step...")
-            return
-
-        time.sleep(self.config.step_delay_s)
+        self.console.render_step(
+            step,
+            [("Loss", f"{loss:.6f}")],
+            [
+                f"Weight = {state.weight:.4f}",
+                f"Bias = {state.bias:.4f}",
+                f"dW = {gradients.weight:.4f}",
+                f"dB = {gradients.bias:.4f}",
+            ],
+            explanation=(
+                "Computed gradients, then updated weight and bias by subtracting "
+                "learning_rate * gradient."
+            ),
+        )
 
     def summarize(self, state: LinearRegressionState) -> None:
         """Display the final parameters."""
-        print("\nTraining complete.")
-        print(f"Final weight: {state.weight:.4f}")
-        print(f"Final bias:   {state.bias:.4f}")
+        self.console.summarize(
+            [
+                "Training complete.",
+                f"Final weight: {state.weight:.4f}",
+                f"Final bias:   {state.bias:.4f}",
+            ]
+        )
