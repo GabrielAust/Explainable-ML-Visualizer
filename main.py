@@ -35,7 +35,22 @@ def prompt_int(prompt: str, default: int) -> int:
         return int(raw)
     except ValueError:
         print(f"Invalid input '{raw}'. Using default {default}.")
+    return default
+
+
+def prompt_bool(prompt: str, default: bool) -> bool:
+    """Prompt the user for a yes/no value with a default."""
+    choices = "y/n"
+    raw_default = "y" if default else "n"
+    raw = input(f"{prompt} ({choices}) [{raw_default}]: ").strip().lower()
+    if not raw:
         return default
+    if raw in {"y", "yes"}:
+        return True
+    if raw in {"n", "no"}:
+        return False
+    print(f"Invalid choice '{raw}'. Using default {raw_default}.")
+    return default
 
 
 def prompt_choice(prompt: str, options: list[str], default: str) -> str:
@@ -69,6 +84,9 @@ def run_linear_regression_demo() -> None:
     dataset_type = prompt_choice("Dataset type", ["linear", "blobs", "circles"], "linear")
     samples = prompt_int("Sample size", 40)
     noise = prompt_float("Noise level", 0.05)
+    show_weights = prompt_bool("Show weights/bias", True)
+    show_gradients = prompt_bool("Show gradients", True)
+    step_through = prompt_bool("Step-through mode", False)
 
     class_overlap = 0.0
     if dataset_type in {"blobs", "circles"}:
@@ -85,7 +103,14 @@ def run_linear_regression_demo() -> None:
         model = LinearRegressionGD(learning_rate=learning_rate, iterations=iterations)
 
         visualizer = LinearRegressionConsoleVisualizer(
-            VisualizationConfig(step_delay_s=0.1, display_every=1)
+            VisualizationConfig(
+                step_delay_s=0.0 if step_through else 0.1,
+                display_every=1,
+                show_weights=show_weights,
+                show_gradients=show_gradients,
+                step_through=step_through,
+                show_explanations=step_through,
+            )
         )
         visualizer.announce(learning_rate=learning_rate, iterations=iterations)
 
