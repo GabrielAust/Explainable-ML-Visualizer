@@ -70,8 +70,80 @@ Learning journeys (to guide backlog prioritization):
 
 * **Language:** Python
 * **Core Libraries:** NumPy, SciPy, scikit-learn
-* **Visualization:** Matplotlib / Plotly *(subject to change)*
+* **Visualization:** Matplotlib (decision documented below)
 * **UI / Interaction:** Lightweight interactive controls
+
+---
+
+## Visualization Library Decision
+
+**Decision: Matplotlib for the primary visualization layer.**
+
+### Evaluation Summary (Matplotlib vs Plotly)
+
+| Criteria | Matplotlib | Plotly (incl. Dash) |
+| --- | --- | --- |
+| **Real-time updates** | ✅ `plt.pause` / `FuncAnimation` for tight training loops | ✅ Streamable, but typically via Dash callbacks or Jupyter contexts |
+| **Dependency footprint** | ✅ Lightweight, no web server required | ⚠️ Adds web framework/runtime (Dash) or notebook requirement |
+| **Local/offline usage** | ✅ Works out of the box in local scripts | ⚠️ Best experience in browser or notebook |
+| **Teaching/annotation** | ✅ Mature annotation + custom artists | ✅ Rich hover, but more web-first |
+| **Integration complexity** | ✅ Simple for step-by-step training loops | ⚠️ More plumbing for state + callbacks |
+
+### Rationale
+
+This project prioritizes **tight, step-by-step training loops** and **minimal setup** for learners.
+Matplotlib provides:
+
+* Straightforward real-time updates without a server
+* Predictable performance for incremental model visualizations
+* Broad familiarity for students and educators
+
+Plotly remains a strong option for future UI expansion (e.g., a browser-based dashboard), but the default stack will remain Matplotlib to keep the core experience lightweight and accessible.
+
+---
+
+## Basic Usage Patterns (Matplotlib)
+
+### 1) Incremental training loop (real-time updates)
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.ion()
+fig, ax = plt.subplots()
+x = np.linspace(0, 2 * np.pi, 200)
+line, = ax.plot(x, np.sin(x))
+ax.set_ylim(-1.1, 1.1)
+
+for step in range(200):
+    phase = step * 0.1
+    line.set_ydata(np.sin(x + phase))
+    ax.set_title(f"Step {step}")
+    fig.canvas.draw()
+    plt.pause(0.01)
+```
+
+### 2) Structured animation (clean separation of update step)
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+fig, ax = plt.subplots()
+x = np.linspace(0, 2 * np.pi, 200)
+line, = ax.plot(x, np.sin(x))
+ax.set_ylim(-1.1, 1.1)
+
+def update(frame):
+    line.set_ydata(np.sin(x + frame * 0.1))
+    ax.set_title(f"Frame {frame}")
+    return line,
+
+ani = FuncAnimation(fig, update, frames=200, interval=30, blit=True)
+plt.show()
+```
 
 ---
 
