@@ -12,6 +12,7 @@ from matplotlib.widgets import Button, CheckButtons, Slider
 import numpy as np
 
 from models.linear_regression import LinearRegressionGD, generate_linear_data
+from utils.exporter import VisualizationFrameExporter
 from utils.state import ModelState
 from visualizations.base import VisualizationBase
 from visualizations.style import DEFAULT_STYLE, PlotStyle, apply_axis_labels, apply_base_style
@@ -361,6 +362,8 @@ class LinearRegressionInteractiveTrainer:
         intercept: float = 1.0,
         noise: float = 2.0,
         samples: int = 50,
+        export_dir: str = "exports",
+        gif_name: str = "linear_regression.gif",
     ) -> None:
         self.learning_rate = learning_rate
         self.iterations_per_step = iterations_per_step
@@ -383,8 +386,17 @@ class LinearRegressionInteractiveTrainer:
         self._learning_rate_slider: Slider | None = None
         self._iterations_slider: Slider | None = None
         self._pause_button: Button | None = None
+        self._png_button: Button | None = None
+        self._gif_button: Button | None = None
         self._overlay_checks: CheckButtons | None = None
         self._timer = None
+        self._recording_gif = False
+        self._exporter = VisualizationFrameExporter(
+            output_dir=export_dir,
+            png_prefix="linear_regression",
+            gif_name=gif_name,
+            frame_duration_s=0.1,
+        )
 
     def show(self) -> None:
         """Render the interactive plot with controls."""
@@ -406,6 +418,8 @@ class LinearRegressionInteractiveTrainer:
         iterations_ax = self.visualizer.fig.add_axes([0.15, 0.14, 0.7, 0.03])
         button_ax = self.visualizer.fig.add_axes([0.82, 0.03, 0.15, 0.06])
         overlay_ax = self.visualizer.fig.add_axes([0.15, 0.03, 0.3, 0.1])
+        png_ax = self.visualizer.fig.add_axes([0.5, 0.03, 0.12, 0.06])
+        gif_ax = self.visualizer.fig.add_axes([0.64, 0.03, 0.16, 0.06])
 
         self._learning_rate_slider = Slider(
             lr_ax,
@@ -424,6 +438,8 @@ class LinearRegressionInteractiveTrainer:
             valstep=1,
         )
         self._pause_button = Button(button_ax, "Pause")
+        self._png_button = Button(png_ax, "Save PNG")
+        self._gif_button = Button(gif_ax, "Record GIF")
         self._overlay_checks = CheckButtons(
             overlay_ax,
             ["Residuals", "Gradients", "Decision boundary"],
@@ -433,6 +449,8 @@ class LinearRegressionInteractiveTrainer:
         self._learning_rate_slider.on_changed(self._on_learning_rate_change)
         self._iterations_slider.on_changed(self._on_iterations_change)
         self._pause_button.on_clicked(self._on_pause_toggle)
+        self._png_button.on_clicked(self._on_save_png)
+        self._gif_button.on_clicked(self._on_toggle_gif)
         self._overlay_checks.on_clicked(self._on_overlay_toggle)
 
     def _start_timer(self) -> None:
@@ -499,6 +517,8 @@ class LinearRegressionInteractiveTrainer:
                 "gradients": gradients,
             },
         )
+        if self._recording_gif and self.visualizer.fig is not None:
+            self._exporter.capture_frame(self.visualizer.fig)
 
     def _on_overlay_toggle(self, _label: str) -> None:
         if self._overlay_checks is None:
@@ -520,3 +540,21 @@ class LinearRegressionInteractiveTrainer:
         gradient_w = sum(error * x for error, x in zip(errors, self.features)) * (2 / len(errors))
         gradient_b = sum(errors) * (2 / len(errors))
         return {"weight": float(gradient_w), "bias": float(gradient_b)}
+
+    def _on_save_png(self, _event: Any) -> None:
+        if self.visualizer.fig is None:
+            return
+        self._exporter.save_png(self.visualizer.fig)
+
+    def _on_toggle_gif(self, _event: Any) -> None:
+        if self._gif_button is None:
+            return
+        self._recording_gif = not self._recording_gif
+        if self._recording_gif:
+            self._exporter.reset_gif()
+            self._gif_button.label.set_text("Stop GIF")
+            if self.visualizer.fig is not None:
+                self._exporter.capture_frame(self.visualizer.fig)
+        else:
+            self._exporter.finalize_gif()
+            self._gif_button.label.set_text("Record GIF")
