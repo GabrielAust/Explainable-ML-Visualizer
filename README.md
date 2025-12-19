@@ -21,6 +21,7 @@ The goal is to build intuition around optimization, decision boundaries, cluster
 * Real-time visualization of model training
 * Interactive datasets and adjustable hyperparameters
 * Clear exposure of internal model states
+* Export snapshots or animated GIFs of visualizations
 * Focus on interpretability and learning dynamics
 
 ### Supported / Planned Algorithms
@@ -163,6 +164,40 @@ def update(frame):
 
 ani = FuncAnimation(fig, update, frames=200, interval=30, blit=True)
 plt.show()
+```
+
+---
+
+## Exporting Visualizations (PNG/GIF)
+
+The interactive linear regression plot ships with built-in export controls:
+
+* **Save PNG**: captures the current frame to `exports/linear_regression_XXXX.png`
+* **Record GIF**: toggles frame capture and writes `exports/linear_regression.gif` when stopped
+
+To launch the interactive view:
+
+```python
+from visualizations.linear_regression_plot import LinearRegressionInteractiveTrainer
+
+trainer = LinearRegressionInteractiveTrainer(
+    learning_rate=0.1,
+    iterations_per_step=1,
+    max_iterations=100,
+    export_dir="exports",
+)
+trainer.show()
+```
+
+If you want to script exports directly, use the shared exporter utility:
+
+```python
+from utils.exporter import VisualizationFrameExporter
+
+exporter = VisualizationFrameExporter(output_dir="exports")
+exporter.save_png(fig, filename="snapshot.png")
+exporter.capture_frame(fig)  # call this for each frame you want
+exporter.finalize_gif(gif_name="demo.gif")
 ```
 
 ---
