@@ -36,6 +36,7 @@ class LinearRegressionGD:
         self.learning_rate = learning_rate
         self.iterations = iterations
         self.state = LinearRegressionState(weight=0.0, bias=0.0)
+        self.loss_history: list[float] = []
 
     def predict(self, features: Sequence[float]) -> list[float]:
         """Predict outputs for the given input features."""
@@ -62,37 +63,63 @@ class LinearRegressionGD:
         if not features:
             raise ValueError("features must not be empty.")
 
-        loss_history: list[float] = []
+        self.loss_history = []
         for step in range(1, self.iterations + 1):
-            predictions = self.predict(features)
-            errors = [pred - target for pred, target in zip(predictions, targets)]
-            loss = sum(error**2 for error in errors) / len(errors)
-
-            gradient_w = sum(error * x for error, x in zip(errors, features)) * (2 / len(errors))
-            gradient_b = sum(errors) * (2 / len(errors))
-
-            self.state.weight -= self.learning_rate * gradient_w
-            self.state.bias -= self.learning_rate * gradient_b
-            loss_history.append(loss)
-            updated_predictions = self.predict(features)
-
-            model_state = ModelState(
-                parameters={
-                    "weight": self.state.weight,
-                    "bias": self.state.bias,
-                },
-                predictions=updated_predictions,
-                loss_history=loss_history.copy(),
-            )
+            model_state, gradients = self.step(features, targets)
 
             if on_step:
                 on_step(
                     step,
                     model_state,
-                    LinearRegressionGradients(weight=gradient_w, bias=gradient_b),
+                    gradients,
                 )
 
         return model_state
+
+    def step(
+        self,
+        features: Sequence[float],
+        targets: Sequence[float],
+    ) -> tuple[ModelState, LinearRegressionGradients]:
+        """Run a single gradient descent update."""
+        self._validate_data(features, targets)
+
+        predictions = self.predict(features)
+        errors, loss = self._compute_loss(predictions, targets)
+
+        gradient_w = sum(error * x for error, x in zip(errors, features)) * (2 / len(errors))
+        gradient_b = sum(errors) * (2 / len(errors))
+
+        self.state.weight -= self.learning_rate * gradient_w
+        self.state.bias -= self.learning_rate * gradient_b
+        self.loss_history.append(loss)
+        updated_predictions = self.predict(features)
+
+        model_state = ModelState(
+            parameters={
+                "weight": self.state.weight,
+                "bias": self.state.bias,
+            },
+            predictions=updated_predictions,
+            loss_history=self.loss_history.copy(),
+        )
+        return model_state, LinearRegressionGradients(weight=gradient_w, bias=gradient_b)
+
+    @staticmethod
+    def _validate_data(features: Sequence[float], targets: Sequence[float]) -> None:
+        if len(features) != len(targets):
+            raise ValueError("features and targets must be the same length.")
+        if not features:
+            raise ValueError("features must not be empty.")
+
+    @staticmethod
+    def _compute_loss(
+        predictions: Sequence[float],
+        targets: Sequence[float],
+    ) -> tuple[list[float], float]:
+        errors = [pred - target for pred, target in zip(predictions, targets)]
+        loss = sum(error**2 for error in errors) / len(errors)
+        return errors, loss
 
 
 def generate_linear_data(
