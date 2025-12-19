@@ -368,7 +368,7 @@ class LinearRegressionInteractiveTrainer:
         self.learning_rate = learning_rate
         self.iterations_per_step = iterations_per_step
         self.max_iterations = max_iterations
-        self._paused = False
+        self._paused = True
         self._current_step = 0
         self._last_state: ModelState | None = None
 
@@ -402,6 +402,7 @@ class LinearRegressionInteractiveTrainer:
         """Render the interactive plot with controls."""
         self.visualizer.setup(metadata={"features": self.features, "targets": self.targets})
         self._build_controls()
+        self._sync_pause_label()
         self._render_current_state()
         self._start_timer()
         plt.show()
@@ -413,6 +414,7 @@ class LinearRegressionInteractiveTrainer:
         self.visualizer.fig.subplots_adjust(
             bottom=self.visualizer.style.layout.control_panel_bottom
         )
+        self.visualizer.fig.canvas.mpl_connect("close_event", self._on_close)
 
         lr_ax = self.visualizer.fig.add_axes([0.15, 0.2, 0.7, 0.03])
         iterations_ax = self.visualizer.fig.add_axes([0.15, 0.14, 0.7, 0.03])
@@ -470,9 +472,7 @@ class LinearRegressionInteractiveTrainer:
 
     def _on_pause_toggle(self, _event: Any) -> None:
         self._paused = not self._paused
-        if self._pause_button is not None:
-            label = "Resume" if self._paused else "Pause"
-            self._pause_button.label.set_text(label)
+        self._sync_pause_label()
         self._render_current_state()
 
     def _on_timer_tick(self) -> None:
@@ -507,6 +507,17 @@ class LinearRegressionInteractiveTrainer:
             predictions = self._last_state.predictions
             gradients = self._compute_gradients(predictions)
         self._render_state(self._last_state, gradients)
+
+    def _sync_pause_label(self) -> None:
+        if self._pause_button is None:
+            return
+        label = "Resume" if self._paused else "Pause"
+        self._pause_button.label.set_text(label)
+
+    def _on_close(self, _event: Any) -> None:
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
 
     def _render_state(self, state: ModelState, gradients: dict[str, float]) -> None:
         self.visualizer.update(
