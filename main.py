@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from models.linear_regression import LinearRegressionGD, generate_linear_data
+from data.dataset_generators import (
+    generate_blob_data,
+    generate_concentric_circles,
+    generate_linear_data,
+)
+from models.linear_regression import LinearRegressionGD
 from visualizations.linear_regression_viz import (
     LinearRegressionConsoleVisualizer,
     VisualizationConfig,
@@ -33,21 +38,82 @@ def prompt_int(prompt: str, default: int) -> int:
         return default
 
 
+def prompt_choice(prompt: str, options: list[str], default: str) -> str:
+    """Prompt the user to select from a list of options."""
+    choices = "/".join(options)
+    raw = input(f"{prompt} ({choices}) [{default}]: ").strip().lower()
+    if not raw:
+        return default
+    if raw in options:
+        return raw
+    print(f"Invalid choice '{raw}'. Using default {default}.")
+    return default
+
+
+def clamp(value: float, min_value: float, max_value: float) -> float:
+    """Clamp a value within a range."""
+    return max(min_value, min(value, max_value))
+
+
+def display_dataset_preview(points: list[tuple[float, float]], labels: list[int]) -> None:
+    """Display a short preview of a classification dataset."""
+    print("\nDataset preview (first 5 samples):")
+    for point, label in list(zip(points, labels))[:5]:
+        print(f"  point={point} label={label}")
+
+
 def run_linear_regression_demo() -> None:
     """Run the linear regression training demo."""
     learning_rate = prompt_float("Learning rate", 0.1)
     iterations = prompt_int("Iterations", 30)
+    dataset_type = prompt_choice("Dataset type", ["linear", "blobs", "circles"], "linear")
+    samples = prompt_int("Sample size", 40)
+    noise = prompt_float("Noise level", 0.05)
 
-    features, targets = generate_linear_data(slope=3.5, intercept=1.2, samples=40, noise=0.05)
-    model = LinearRegressionGD(learning_rate=learning_rate, iterations=iterations)
+    class_overlap = 0.0
+    if dataset_type in {"blobs", "circles"}:
+        class_overlap = prompt_float("Class overlap (0-1)", 0.2)
+        class_overlap = clamp(class_overlap, 0.0, 1.0)
 
-    visualizer = LinearRegressionConsoleVisualizer(
-        VisualizationConfig(step_delay_s=0.1, display_every=1)
-    )
-    visualizer.announce(learning_rate=learning_rate, iterations=iterations)
+    if dataset_type == "linear":
+        features, targets = generate_linear_data(
+            slope=3.5,
+            intercept=1.2,
+            samples=samples,
+            noise=max(0.0, noise),
+        )
+        model = LinearRegressionGD(learning_rate=learning_rate, iterations=iterations)
 
-    final_state = model.fit(features, targets, on_step=visualizer.update)
-    visualizer.summarize(final_state)
+        visualizer = LinearRegressionConsoleVisualizer(
+            VisualizationConfig(step_delay_s=0.1, display_every=1)
+        )
+        visualizer.announce(learning_rate=learning_rate, iterations=iterations)
+
+        final_state = model.fit(features, targets, on_step=visualizer.update)
+        visualizer.summarize(final_state)
+        return
+
+    if dataset_type == "blobs":
+        points, labels = generate_blob_data(
+            samples=samples,
+            classes=2,
+            class_overlap=class_overlap,
+            noise=max(0.0, noise),
+        )
+        dataset_label = "Blob dataset"
+    else:
+        points, labels = generate_concentric_circles(
+            samples=samples,
+            class_overlap=class_overlap,
+            noise=max(0.0, noise),
+        )
+        dataset_label = "Concentric circles dataset"
+
+    print(f"\n{dataset_label} generated with {samples} samples.")
+    print(f"Noise level: {noise}")
+    print(f"Class overlap: {class_overlap}")
+    display_dataset_preview(points, labels)
+
 
 
 def main() -> None:
