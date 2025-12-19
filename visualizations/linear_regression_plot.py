@@ -14,12 +14,14 @@ import numpy as np
 from models.linear_regression import LinearRegressionGD, generate_linear_data
 from utils.state import ModelState
 from visualizations.base import VisualizationBase
+from visualizations.style import DEFAULT_STYLE, PlotStyle, apply_axis_labels, apply_base_style
 
 
 class LinearRegressionPlotVisualizer(VisualizationBase):
     """Plot scatter data, regression line, and loss trend over time."""
 
-    def __init__(self) -> None:
+    def __init__(self, style: PlotStyle | None = None) -> None:
+        self.style = style or DEFAULT_STYLE
         self.fig: plt.Figure | None = None
         self.data_ax: plt.Axes | None = None
         self.loss_ax: plt.Axes | None = None
@@ -46,21 +48,58 @@ class LinearRegressionPlotVisualizer(VisualizationBase):
             return
 
         plt.ion()
-        self.fig, (self.data_ax, self.loss_ax) = plt.subplots(1, 2, figsize=(10, 4))
-        self.data_ax.set_title("Linear Regression Fit")
-        self.data_ax.set_xlabel("Feature")
-        self.data_ax.set_ylabel("Target")
-        self.loss_ax.set_title("Loss Trend")
-        self.loss_ax.set_xlabel("Iteration")
-        self.loss_ax.set_ylabel("Loss")
+        apply_base_style(self.style)
+        self.fig, (self.data_ax, self.loss_ax) = plt.subplots(
+            1,
+            2,
+            figsize=self.style.layout.figsize,
+        )
+        apply_axis_labels(
+            self.data_ax,
+            title=self.style.titles.data,
+            xlabel=self.style.labels.feature,
+            ylabel=self.style.labels.target,
+        )
+        apply_axis_labels(
+            self.loss_ax,
+            title=self.style.titles.loss,
+            xlabel=self.style.labels.iteration,
+            ylabel=self.style.labels.loss,
+        )
 
         self._x, self._y = self._extract_xy({}, metadata)
-        self._scatter = self.data_ax.scatter(self._x, self._y, color="tab:blue", alpha=0.7)
-        self._line, = self.data_ax.plot(self._x, self._y, color="tab:red", linewidth=2)
-        self._loss_line, = self.loss_ax.plot([], [], color="tab:purple", linewidth=2)
-        self._residual_collection = LineCollection([], colors="tab:gray", linewidths=1, alpha=0.6)
+        palette = self.style.palette
+        self._scatter = self.data_ax.scatter(
+            self._x,
+            self._y,
+            color=palette.data_points,
+            alpha=0.7,
+        )
+        self._line, = self.data_ax.plot(
+            self._x,
+            self._y,
+            color=palette.regression_line,
+            linewidth=2,
+        )
+        self._loss_line, = self.loss_ax.plot(
+            [],
+            [],
+            color=palette.loss_line,
+            linewidth=2,
+        )
+        self._residual_collection = LineCollection(
+            [],
+            colors=palette.residuals,
+            linewidths=1,
+            alpha=0.6,
+        )
         self.data_ax.add_collection(self._residual_collection)
-        self._gradient_arrow = FancyArrowPatch((0, 0), (0, 0), color="tab:green", arrowstyle="->")
+        self._gradient_arrow = FancyArrowPatch(
+            (0, 0),
+            (0, 0),
+            color=palette.gradients,
+            arrowstyle="->",
+        )
         self.data_ax.add_patch(self._gradient_arrow)
         self._gradient_text = self.data_ax.text(
             0.02,
@@ -69,9 +108,14 @@ class LinearRegressionPlotVisualizer(VisualizationBase):
             transform=self.data_ax.transAxes,
             ha="left",
             va="top",
-            color="tab:green",
+            color=palette.gradients,
         )
-        self._decision_boundary = self.data_ax.axvline(0, color="tab:orange", linestyle="--", linewidth=1.5)
+        self._decision_boundary = self.data_ax.axvline(
+            0,
+            color=palette.decision_boundary,
+            linestyle="--",
+            linewidth=1.5,
+        )
         self._decision_label = self.data_ax.text(
             0.02,
             0.9,
@@ -79,14 +123,15 @@ class LinearRegressionPlotVisualizer(VisualizationBase):
             transform=self.data_ax.transAxes,
             ha="left",
             va="top",
-            color="tab:orange",
+            color=palette.decision_boundary,
         )
 
         self.data_ax.relim()
         self.data_ax.autoscale_view()
         self.loss_ax.set_xlim(0, 1)
         self.loss_ax.set_ylim(0, 1)
-        self.fig.tight_layout()
+        if self.style.layout.tight_layout:
+            self.fig.tight_layout()
         self.fig.canvas.draw_idle()
         self.fig.canvas.flush_events()
 
@@ -353,7 +398,9 @@ class LinearRegressionInteractiveTrainer:
         if self.visualizer.fig is None:
             return
 
-        self.visualizer.fig.subplots_adjust(bottom=0.38)
+        self.visualizer.fig.subplots_adjust(
+            bottom=self.visualizer.style.layout.control_panel_bottom
+        )
 
         lr_ax = self.visualizer.fig.add_axes([0.15, 0.2, 0.7, 0.03])
         iterations_ax = self.visualizer.fig.add_axes([0.15, 0.14, 0.7, 0.03])
