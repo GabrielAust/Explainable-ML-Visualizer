@@ -87,12 +87,24 @@ def _prompt_visual_config() -> VisualizationConfig:
     show_state_overlay = prompt_bool("Show state overlay", True)
     step_through = prompt_bool("Step-through mode", False)
     show_explanations = prompt_bool("Show explanations", step_through)
+    export_assets = prompt_bool("Export visualization frames", False)
+    export_dir = None
+    export_png = True
+    export_gif = False
+    if export_assets:
+        export_dir_input = input("Export directory [exports]: ").strip()
+        export_dir = export_dir_input or "exports"
+        export_png = prompt_bool("Export PNG frames", True)
+        export_gif = prompt_bool("Export GIF animation", False)
     return VisualizationConfig(
         step_delay_s=0.0 if step_through else 0.1,
         display_every=1,
         step_through=step_through,
         show_explanations=show_explanations,
         show_state_overlay=show_state_overlay,
+        export_dir=export_dir,
+        export_png=export_png,
+        export_gif=export_gif,
     )
 
 
