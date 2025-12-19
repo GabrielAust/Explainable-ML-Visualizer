@@ -47,6 +47,25 @@ It is designed for:
 
 ---
 
+## Target Users & Learning Goals
+
+Primary personas:
+
+* Students building first-principles intuition about model behavior
+* Educators designing interactive lessons or lab exercises
+* Practitioners debugging or validating model dynamics
+* Curious learners exploring ML fundamentals without heavy math
+
+Learning journeys (to guide backlog prioritization):
+
+* See gradient descent converge and relate step size to stability
+* Understand decision boundaries and how they shift with data or regularization
+* Visualize clustering behavior as centroids move and assignments change
+* Explore dimensionality reduction by watching variance captured over time
+* Inspect feature influence and model state evolution during training
+
+---
+
 ## Tech Stack
 
 * **Language:** Python
