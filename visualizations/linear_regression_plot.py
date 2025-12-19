@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button, Slider
 import numpy as np
 
+from models.linear_regression import LinearRegressionGD, generate_linear_data
 from utils.state import ModelState
 from visualizations.base import VisualizationBase
 
@@ -160,3 +162,137 @@ class LinearRegressionPlotVisualizer(VisualizationBase):
         if array.size == 0:
             return None
         return array
+
+
+class LinearRegressionInteractiveTrainer:
+    """Interactive trainer that adds UI controls to the linear regression plot."""
+
+    def __init__(
+        self,
+        learning_rate: float = 0.1,
+        iterations_per_step: int = 1,
+        max_iterations: int = 100,
+        slope: float = 2.5,
+        intercept: float = 1.0,
+        noise: float = 2.0,
+        samples: int = 50,
+    ) -> None:
+        self.learning_rate = learning_rate
+        self.iterations_per_step = iterations_per_step
+        self.max_iterations = max_iterations
+        self._paused = False
+        self._current_step = 0
+        self._last_state: ModelState | None = None
+
+        features, targets = generate_linear_data(
+            slope=slope,
+            intercept=intercept,
+            samples=samples,
+            noise=noise,
+        )
+        self.features = np.asarray(features, dtype=float)
+        self.targets = np.asarray(targets, dtype=float)
+
+        self.model = LinearRegressionGD(learning_rate=learning_rate, iterations=max_iterations)
+        self.visualizer = LinearRegressionPlotVisualizer()
+        self._learning_rate_slider: Slider | None = None
+        self._iterations_slider: Slider | None = None
+        self._pause_button: Button | None = None
+        self._timer = None
+
+    def show(self) -> None:
+        """Render the interactive plot with controls."""
+        self.visualizer.setup(metadata={"features": self.features, "targets": self.targets})
+        self._build_controls()
+        self._render_current_state()
+        self._start_timer()
+        plt.show()
+
+    def _build_controls(self) -> None:
+        if self.visualizer.fig is None:
+            return
+
+        self.visualizer.fig.subplots_adjust(bottom=0.3)
+
+        lr_ax = self.visualizer.fig.add_axes([0.15, 0.2, 0.7, 0.03])
+        iterations_ax = self.visualizer.fig.add_axes([0.15, 0.14, 0.7, 0.03])
+        button_ax = self.visualizer.fig.add_axes([0.82, 0.03, 0.15, 0.06])
+
+        self._learning_rate_slider = Slider(
+            lr_ax,
+            "Learning rate",
+            valmin=0.001,
+            valmax=1.0,
+            valinit=self.learning_rate,
+            valstep=0.001,
+        )
+        self._iterations_slider = Slider(
+            iterations_ax,
+            "Iterations / step",
+            valmin=1,
+            valmax=20,
+            valinit=self.iterations_per_step,
+            valstep=1,
+        )
+        self._pause_button = Button(button_ax, "Pause")
+
+        self._learning_rate_slider.on_changed(self._on_learning_rate_change)
+        self._iterations_slider.on_changed(self._on_iterations_change)
+        self._pause_button.on_clicked(self._on_pause_toggle)
+
+    def _start_timer(self) -> None:
+        if self.visualizer.fig is None:
+            return
+        self._timer = self.visualizer.fig.canvas.new_timer(interval=50)
+        self._timer.add_callback(self._on_timer_tick)
+        self._timer.start()
+
+    def _on_learning_rate_change(self, value: float) -> None:
+        self.learning_rate = float(value)
+        self.model.learning_rate = self.learning_rate
+        self._render_current_state()
+
+    def _on_iterations_change(self, value: float) -> None:
+        self.iterations_per_step = int(value)
+
+    def _on_pause_toggle(self, _event: Any) -> None:
+        self._paused = not self._paused
+        if self._pause_button is not None:
+            label = "Resume" if self._paused else "Pause"
+            self._pause_button.label.set_text(label)
+        self._render_current_state()
+
+    def _on_timer_tick(self) -> None:
+        if self._paused or self._current_step >= self.max_iterations:
+            return
+
+        steps_to_run = min(self.iterations_per_step, self.max_iterations - self._current_step)
+        for _ in range(steps_to_run):
+            self._last_state, _ = self.model.step(self.features, self.targets)
+            self._current_step += 1
+
+        if self._last_state is not None:
+            self._render_state(self._last_state)
+
+    def _render_current_state(self) -> None:
+        if self._last_state is None:
+            predictions = self.model.predict(self.features)
+            errors = [pred - target for pred, target in zip(predictions, self.targets)]
+            loss = sum(error**2 for error in errors) / len(errors)
+            if not self.model.loss_history:
+                self.model.loss_history = [loss]
+            self._last_state = ModelState(
+                parameters={
+                    "weight": self.model.state.weight,
+                    "bias": self.model.state.bias,
+                },
+                predictions=predictions,
+                loss_history=self.model.loss_history.copy(),
+            )
+        self._render_state(self._last_state)
+
+    def _render_state(self, state: ModelState) -> None:
+        self.visualizer.update(
+            state,
+            metadata={"features": self.features, "targets": self.targets},
+        )
