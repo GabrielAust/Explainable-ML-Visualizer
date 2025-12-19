@@ -168,6 +168,15 @@ plt.show()
 
 ---
 
+## Performance Note (Informal Benchmarking)
+
+For smooth console and Matplotlib updates on a typical laptop, aim for **~50–300 samples**
+per dataset and **<200 update steps**. Larger datasets (500+ points) can still work, but
+updates may stutter unless you increase `display_every` or the render throttle
+(`min_render_interval_s`) to reduce redraw frequency.
+
+---
+
 ## Exporting Visualizations (PNG/GIF)
 
 The interactive linear regression plot ships with built-in export controls:
